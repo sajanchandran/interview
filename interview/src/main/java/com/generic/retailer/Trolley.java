@@ -8,8 +8,8 @@ public final class Trolley {
 	private List<Item> items = new ArrayList<Item>();
 
 	public void addItem(String item) {
-		switch (item) {
-		case "Book":
+		switch (item.toUpperCase()) {
+		case "BOOK":
 			items.add(new Book());
 			break;
 		case "CD":

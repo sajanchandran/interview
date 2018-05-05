@@ -61,8 +61,10 @@ public final class Cli implements AutoCloseable {
       writeLine("Would you like anything else?");
       prompt();
       line = readLine();
-      trolley.addItem(line.get());
+      line.ifPresent(e -> trolley.addItem(e));
     }
+    RecieptRenderer reciept = new RecieptRenderer(trolley, LocalDate.now());
+    writer.write(reciept.body());
     writeLine(String.format("Thank you for visiting Generic Retailer, your total is %s", 0));
   }
 

@@ -17,8 +17,7 @@ public class RecieptRendererTest {
 		trolley.addItem("CD");
 		trolley.addItem("DVD");
 		trolley.addItem("DVD");
-		RecieptRenderer rr = new RecieptRenderer(trolley, LocalDate.of(2018, 05, 03));
-		System.out.println(rr.body());
+		RecieptRenderer rr = new RecieptRenderer(trolley, LocalDate.of(2018, 05, 03), null);
 	}
 }
 

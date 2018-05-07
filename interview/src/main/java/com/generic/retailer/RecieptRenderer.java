@@ -11,20 +11,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.generic.retailer.discounts.Discount;
+
 public class RecieptRenderer {
 
 	private Trolley trolley;
 	private LocalDate localDate;
 	private double discount;
 	private double dvdTotal;
+	private double discountToSubtract;
 	private long dvdCount;
 	private BufferedWriter writer;
 	private DecimalFormat dfFormat;
+	private List<Discount<Item>> discounts;
 
-	public RecieptRenderer(Trolley trolley, LocalDate localDate, BufferedWriter writer) {
+	public RecieptRenderer(Trolley trolley, LocalDate localDate, BufferedWriter writer,
+			List<Discount<Item>> discounts) {
 		this.trolley = trolley;
 		this.localDate = localDate;
 		this.writer = writer;
+		this.discounts = discounts;
 		dfFormat = new DecimalFormat("####0.00");
 		dvdCount = trolley.getItems().stream().filter(e -> e.toString().equalsIgnoreCase("DVD")).count();
 	}
@@ -63,8 +69,19 @@ public class RecieptRenderer {
 			writer.write(System.lineSeparator());
 		}
 
-		add2For1DiscountOnDVD(body, writer);
-		addThursdayDiscount(body, writer);
+		for (Discount<Item> discount : discounts) {
+			writer.write(discount.renderInReport());
+			writer.write(lineSeparator());
+			Double amount = discount.getAmount();
+			discountToSubtract += amount;
+		}
+
+//		addThursdayDiscount(body, writer);
+	}
+
+	private void writeBuffer(String input) throws IOException {
+		writer.write(input);
+		writer.write(lineSeparator());
 	}
 
 	private void add2For1DiscountOnDVD(StringBuilder body, BufferedWriter writer) throws IOException {
@@ -73,7 +90,7 @@ public class RecieptRenderer {
 			freeDvd = (dvdCount / 2);
 			dvdTotal = freeDvd * 15D;
 			writer.write(String.format("%1$s %2$12s", "2 FOR 1", "-£" + dfFormat.format(dvdTotal)));
-			writer.write(System.lineSeparator());
+			writer.write(lineSeparator());
 		}
 	}
 
@@ -81,7 +98,7 @@ public class RecieptRenderer {
 		if (localDate.getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
 			discount = (20 * calculateTotal()) / 100;
 			writer.write(String.format("%1$s %2$14s", "THURS", "-£" + dfFormat.format(discount)));
-			writer.write(System.lineSeparator());
+			writer.write(lineSeparator());
 		}
 	}
 
@@ -94,13 +111,7 @@ public class RecieptRenderer {
 		for (Item item : trolley.getItems()) {
 			total += item.price();
 		}
-		if (localDate.getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
-			total -= discount;
-		}
-		if (dvdCount > 1) {
-			total -= dvdTotal;
-		}
-
+		total -= discountToSubtract;
 		return total;
 	}
 

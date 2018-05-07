@@ -6,9 +6,17 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+
+import org.assertj.core.util.Lists;
+
+import com.generic.retailer.discounts.Discount;
+import com.generic.retailer.discounts.ThursdayDiscount;
+import com.generic.retailer.discounts.TwoForOneDiscount;
 
 public final class Cli implements AutoCloseable {
 
@@ -64,9 +72,12 @@ public final class Cli implements AutoCloseable {
       line = readLine();
       line.ifPresent(e -> trolley.addItem(e));
     }
-    RecieptRenderer reciept = new RecieptRenderer(trolley, date, writer);
+    Discount<Item> dvdDiscount = new TwoForOneDiscount<Item>(new DVD(), trolley);
+    Discount<Item> thursdayDiscount = new ThursdayDiscount<Item>(new DVD(), date, trolley);
+    List<Discount<Item>> discounts = Arrays.asList(dvdDiscount, thursdayDiscount);
+    RecieptRenderer reciept = new RecieptRenderer(trolley, date, writer, discounts);
     reciept.render();
-    writeLine(String.format("Thank you for visiting Generic Retailer, your total is %s", 0));
+    writeLine(String.format("Thank you for visiting Generic Retailer, your total is %s", reciept.total()));
   }
 
   @Override

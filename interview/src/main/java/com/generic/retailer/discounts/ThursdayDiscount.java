@@ -3,6 +3,8 @@ package com.generic.retailer.discounts;
 import java.text.DecimalFormat;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import com.generic.retailer.Item;
 import com.generic.retailer.Trolley;
@@ -36,10 +38,14 @@ public class ThursdayDiscount<T extends Item> extends Discount<Item>{
 	}
 	
 	private Double calculateTotal() {
+		List<Item> remainingItems = trolley.getItems().stream().filter(e -> !e.toString().equals("DVD")).collect(Collectors.toList());
 		Double total = 0.00;
-		for (Item item : trolley.getItems()) {
+		for (Item item : remainingItems) {
 			total += item.price();
 		}
+		long totalDvdCount = trolley.getItems().stream().filter(e -> e.toString().equals("DVD")).count();
+		double discountToAdd = (totalDvdCount % 2) * getBasePrice(t);
+		total += discountToAdd;
 		return total;
 	}
 

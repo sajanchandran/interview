@@ -1,5 +1,6 @@
 package com.generic.retailer;
 
+import static java.lang.String.format;
 import static java.lang.System.lineSeparator;
 
 import java.io.BufferedWriter;
@@ -12,25 +13,23 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.generic.retailer.discounts.Discount;
+import com.generic.retailer.discounts.ThursdayDiscount;
+import com.generic.retailer.discounts.TwoForOneDiscount;
 
 public class RecieptRenderer {
 
 	private Trolley trolley;
 	private LocalDate localDate;
-	private double discount;
-	private double dvdTotal;
-	private double discountToSubtract;
+	private double thursdayDiscountAmount;
 	private long dvdCount;
 	private BufferedWriter writer;
 	private DecimalFormat dfFormat;
-	private List<Discount<Item>> discounts;
+	private Double dvdDiscountAmount;
 
-	public RecieptRenderer(Trolley trolley, LocalDate localDate, BufferedWriter writer,
-			List<Discount<Item>> discounts) {
+	public RecieptRenderer(Trolley trolley, LocalDate localDate, BufferedWriter writer) {
 		this.trolley = trolley;
 		this.localDate = localDate;
 		this.writer = writer;
-		this.discounts = discounts;
 		dfFormat = new DecimalFormat("####0.00");
 		dvdCount = trolley.getItems().stream().filter(e -> e.toString().equalsIgnoreCase("DVD")).count();
 	}
@@ -58,49 +57,37 @@ public class RecieptRenderer {
 	}
 
 	private void body() throws IOException {
-		StringBuilder body = new StringBuilder();
+		StringBuilder body = null;
 		for (String itemName : groupItemAndCount().keySet()) {
 			body = new StringBuilder();
 			int leftPadding = 19 - itemName(itemName).length();
-			body.append(String.format("%1$s %2$" + leftPadding + "s", itemName(itemName),
-					"£" + dfFormat.format(groupItemAndCount().get(itemName).stream().map(i -> i.price())
-							.collect(Collectors.summarizingDouble(e -> e)).getSum())));
+			body.append(format("%1$s %2$" + leftPadding + "s", itemName(itemName),
+					"£" + totalForEachItem(itemName)));
 			writer.write(body.toString());
 			writer.write(System.lineSeparator());
 		}
 
-		for (Discount<Item> discount : discounts) {
-			writer.write(discount.renderInReport());
+		Discount<Item> dvdDiscount = new TwoForOneDiscount<Item>(new DVD(), trolley);
+		if(dvdCount > 1){
+			writer.write(dvdDiscount.renderInReport());
 			writer.write(lineSeparator());
-			Double amount = discount.getAmount();
-			discountToSubtract += amount;
+			dvdDiscountAmount = dvdDiscount.getAmount();
 		}
-
-//		addThursdayDiscount(body, writer);
-	}
-
-	private void writeBuffer(String input) throws IOException {
-		writer.write(input);
-		writer.write(lineSeparator());
-	}
-
-	private void add2For1DiscountOnDVD(StringBuilder body, BufferedWriter writer) throws IOException {
-		if (dvdCount > 1) {
-			long freeDvd;
-			freeDvd = (dvdCount / 2);
-			dvdTotal = freeDvd * 15D;
-			writer.write(String.format("%1$s %2$12s", "2 FOR 1", "-£" + dfFormat.format(dvdTotal)));
-			writer.write(lineSeparator());
-		}
-	}
-
-	private void addThursdayDiscount(StringBuilder body, BufferedWriter writer2) throws IOException {
+		
+		Discount<Item> thursdayDiscount = new ThursdayDiscount<Item>(new DVD(), localDate, trolley);
 		if (localDate.getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
-			discount = (20 * calculateTotal()) / 100;
-			writer.write(String.format("%1$s %2$14s", "THURS", "-£" + dfFormat.format(discount)));
+			writer.write(thursdayDiscount.renderInReport());
 			writer.write(lineSeparator());
+			thursdayDiscountAmount = thursdayDiscount.getAmount();
 		}
+
 	}
+
+	private String totalForEachItem(String itemName) {
+		return dfFormat.format(groupItemAndCount().get(itemName).stream().map(i -> i.price())
+				.collect(Collectors.summarizingDouble(e -> e)).getSum());
+	}
+
 
 	private String itemName(String itemName) {
 		return formatItemNames(itemName.toString(), groupItemAndCount().get(itemName).size());
@@ -111,7 +98,13 @@ public class RecieptRenderer {
 		for (Item item : trolley.getItems()) {
 			total += item.price();
 		}
-		total -= discountToSubtract;
+		if (localDate.getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
+			total -= thursdayDiscountAmount;
+		}
+		if (dvdCount > 1) {
+			total -= dvdDiscountAmount;
+		}
+
 		return total;
 	}
 
